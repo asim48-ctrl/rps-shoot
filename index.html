@@ -127,6 +127,13 @@
     letter-spacing: 2px;
   }
   #count.shoot { color: #ffd93d; transform: scale(1.25); }
+  /* the fist "fires": it turns into the actual rock / paper / scissors */
+  #fist.shot { animation: shot .55s cubic-bezier(.2, 1.6, .4, 1) both; }
+  @keyframes shot {
+    0% { transform: translateY(0) scale(1); }
+    35% { transform: translateY(-34px) scale(1.55) rotate(-10deg); }
+    100% { transform: translateY(0) scale(1); }
+  }
   .pop { animation: pop .45s cubic-bezier(.2, 1.6, .4, 1) both; }
   @keyframes pop {
     0% { transform: scale(.2) rotate(-20deg); opacity: 0; }
@@ -351,7 +358,6 @@
 /* ================= game rules ================= */
 const MOVES = ["rock", "paper", "scissors"];
 const CARD_EMOJI = { rock: "🪨", paper: "📄", scissors: "✂️" };
-const HAND_EMOJI = { rock: "✊", paper: "✋", scissors: "✌️" };
 const BEATEN_BY = { rock: "paper", paper: "scissors", scissors: "rock" }; // what beats X
 const BEATS     = { rock: "scissors", paper: "rock", scissors: "paper" }; // what X beats
 
@@ -507,11 +513,15 @@ function playRound() {
     : BEATS[player] === comp ? "win" : "lose";
   outcomes.push(outcome);
 
-  // fists fire! player slot pops the hand that was chosen
+  // fists fire! the bouncing fist turns into the actual throw,
+  // and both sides reveal the real rock / paper / scissors
   fist.classList.remove("bounce");
-  playerSlot.textContent = HAND_EMOJI[player];
-  playerSlot.querySelector(".tag")?.remove();
-  robotSlot.textContent = HAND_EMOJI[comp];
+  fist.textContent = CARD_EMOJI[player];
+  fist.classList.remove("shot");
+  void fist.offsetWidth;
+  fist.classList.add("shot");
+  playerSlot.textContent = CARD_EMOJI[player];
+  robotSlot.textContent = CARD_EMOJI[comp];
   playerSlot.classList.remove("pop"); robotSlot.classList.remove("pop");
   void playerSlot.offsetWidth; void robotSlot.offsetWidth;
   playerSlot.classList.add("pop");
@@ -533,6 +543,8 @@ function playRound() {
     if (you >= GOAL || robo >= GOAL) return gameOver();
     state = "pick";
     setCountdownStep("Pick your move!");
+    fist.textContent = "✊";
+    fist.classList.remove("shot");
     result.classList.remove("show");
     cards.forEach(c => c.disabled = false);
     $("go").disabled = false;
@@ -566,6 +578,8 @@ function resetGame() {
   $("brainfill").style.width = "0%";
   $("overlay").classList.remove("show");
   selection = null;
+  fist.textContent = "✊";
+  fist.classList.remove("shot");
   cards.forEach(c => { c.disabled = false; c.classList.remove("selected"); });
   $("go").disabled = false;
   setCountdownStep("Pick your move!");
