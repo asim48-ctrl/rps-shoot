@@ -1,0 +1,630 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<title>Rock Paper Scissors SHOOT!</title>
+<style>
+  :root {
+    --card-rock: #d9a066;
+    --card-paper: #8fc7ff;
+    --card-scissors: #ff9ec2;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    font-family: "Comic Sans MS", "Chalkboard SE", "Baloo 2", system-ui, sans-serif;
+    background: linear-gradient(160deg, #6ec3ff 0%, #a5e7ff 45%, #fff3b8 100%);
+    overflow: hidden;
+    user-select: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  /* ---------- header ---------- */
+  header {
+    width: 100%;
+    max-width: 620px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 14px 0;
+  }
+  #mute {
+    font-size: 26px;
+    background: rgba(255,255,255,.75);
+    border: 3px solid #fff;
+    border-radius: 50%;
+    width: 54px; height: 54px;
+    cursor: pointer;
+    box-shadow: 0 4px 0 rgba(0,0,0,.12);
+  }
+  #mute:active { transform: translateY(2px); box-shadow: 0 2px 0 rgba(0,0,0,.12); }
+
+  h1 {
+    margin: 4px 0 6px;
+    font-size: clamp(28px, 6vw, 44px);
+    color: #fff;
+    text-shadow: 0 4px 0 rgba(0,0,0,.18), 0 0 18px rgba(255,255,255,.6);
+    letter-spacing: 2px;
+    text-align: center;
+  }
+
+  /* ---------- scoreboard ---------- */
+  .scoreboard {
+    display: flex;
+    gap: 16px;
+    margin: 2px 0 8px;
+  }
+  .score {
+    background: rgba(255,255,255,.85);
+    border: 4px solid #fff;
+    border-radius: 20px;
+    padding: 4px 22px;
+    font-size: clamp(26px, 5vw, 38px);
+    font-weight: bold;
+    box-shadow: 0 5px 0 rgba(0,0,0,.12);
+    min-width: 130px;
+    text-align: center;
+  }
+  .score .num { color: #ff7a00; }
+  .score.robo .num { color: #5b7cfa; }
+
+  /* ---------- stage ---------- */
+  main { flex: 1; display: flex; flex-direction: column; align-items: center; width: 100%; max-width: 620px; }
+  #stage {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(12px, 6vw, 48px);
+    width: 100%;
+    min-height: 200px;
+  }
+  .slot {
+    width: clamp(90px, 22vw, 140px);
+    height: clamp(110px, 26vw, 160px);
+    background: rgba(255,255,255,.6);
+    border: 5px dashed rgba(255,255,255,.9);
+    border-radius: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: clamp(60px, 15vw, 100px);
+    color: rgba(0,0,0,.15);
+    transition: transform .3s;
+  }
+  .slot .tag {
+    position: absolute;
+    font-size: clamp(14px, 3vw, 20px);
+    font-weight: bold;
+    color: rgba(0,0,0,.35);
+    margin-top: clamp(96px, 22vw, 140px);
+    white-space: nowrap;
+  }
+  .center { display: flex; flex-direction: column; align-items: center; }
+  #fist {
+    font-size: clamp(90px, 22vw, 150px);
+    line-height: 1;
+    filter: drop-shadow(0 10px 6px rgba(0,0,0,.25));
+  }
+  #fist.bounce { animation: fistbounce .7s ease-in-out infinite; }
+  @keyframes fistbounce {
+    0%, 100% { transform: translateY(0) scale(1); }
+    50% { transform: translateY(-34px) scale(1.06); }
+  }
+  #count {
+    margin-top: 10px;
+    font-size: clamp(26px, 7vw, 46px);
+    font-weight: bold;
+    color: #fff;
+    text-shadow: 0 4px 0 rgba(0,0,0,.22), 0 0 14px rgba(255,255,255,.7);
+    min-height: 1.3em;
+    text-align: center;
+    letter-spacing: 2px;
+  }
+  #count.shoot { color: #ffd93d; transform: scale(1.25); }
+  .pop { animation: pop .45s cubic-bezier(.2, 1.6, .4, 1) both; }
+  @keyframes pop {
+    0% { transform: scale(.2) rotate(-20deg); opacity: 0; }
+    100% { transform: scale(1) rotate(0); opacity: 1; }
+  }
+  .wiggle { animation: wiggle .4s ease-in-out 2; }
+  @keyframes wiggle {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-10px) rotate(-3deg); }
+    75% { transform: translateX(10px) rotate(3deg); }
+  }
+
+  /* ---------- result banner ---------- */
+  #result {
+    position: fixed;
+    top: 38%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0);
+    font-size: clamp(44px, 12vw, 90px);
+    font-weight: bold;
+    color: #fff;
+    text-shadow: 0 6px 0 rgba(0,0,0,.25), 0 0 30px rgba(255,255,255,.9);
+    z-index: 10;
+    white-space: nowrap;
+    text-align: center;
+    pointer-events: none;
+  }
+  #result.show { animation: bannerpop .5s cubic-bezier(.2, 1.6, .4, 1) both; }
+  @keyframes bannerpop {
+    0% { transform: translate(-50%, -50%) scale(0) rotate(-8deg); }
+    70% { transform: translate(-50%, -50%) scale(1.15) rotate(2deg); }
+    100% { transform: translate(-50%, -50%) scale(1) rotate(0); }
+  }
+
+  /* ---------- brain meter (adult Easter egg) ---------- */
+  #brain {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    color: rgba(0,0,0,.45);
+    margin-bottom: 6px;
+  }
+  #brain .bar {
+    width: 110px; height: 12px;
+    background: rgba(255,255,255,.7);
+    border-radius: 8px;
+    overflow: hidden;
+    border: 2px solid rgba(255,255,255,.9);
+  }
+  #brain .fill { height: 100%; width: 0%; background: linear-gradient(90deg,#7c5cff,#4be0ff); border-radius: 6px; transition: width .6s; }
+
+  /* ---------- cards + go ---------- */
+  footer {
+    width: 100%;
+    max-width: 620px;
+    padding: 10px 14px 18px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+  .cards { display: flex; gap: 12px; width: 100%; justify-content: center; }
+  .card {
+    flex: 1;
+    max-width: 170px;
+    font-size: clamp(46px, 10vw, 64px);
+    line-height: 1.15;
+    padding: 10px 0 8px;
+    border: 5px solid #fff;
+    border-radius: 26px;
+    cursor: pointer;
+    box-shadow: 0 6px 0 rgba(0,0,0,.15);
+    transition: transform .15s, box-shadow .15s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+  }
+  .card .word { font-size: clamp(12px, 2.6vw, 16px); font-weight: bold; color: rgba(0,0,0,.5); letter-spacing: 1px; }
+  .card.rock { background: var(--card-rock); }
+  .card.paper { background: var(--card-paper); }
+  .card.scissors { background: var(--card-scissors); }
+  .card:active { transform: translateY(4px); box-shadow: 0 2px 0 rgba(0,0,0,.15); }
+  .card.selected {
+    transform: scale(1.12);
+    box-shadow: 0 0 0 6px #ffd93d, 0 6px 0 rgba(0,0,0,.15);
+    animation: cardpulse 1s ease-in-out infinite;
+  }
+  @keyframes cardpulse {
+    0%, 100% { transform: scale(1.12); }
+    50% { transform: scale(1.18); }
+  }
+  .card:disabled { opacity: .55; pointer-events: none; }
+
+  #go {
+    font-size: clamp(30px, 7vw, 44px);
+    font-weight: bold;
+    color: #fff;
+    background: #3ed46a;
+    border: 5px solid #fff;
+    border-radius: 60px;
+    padding: 12px 70px;
+    cursor: pointer;
+    box-shadow: 0 7px 0 rgba(0,0,0,.18);
+    letter-spacing: 2px;
+    animation: gopulse 1.2s ease-in-out infinite;
+  }
+  @keyframes gopulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+  }
+  #go:active { transform: translateY(5px); box-shadow: 0 2px 0 rgba(0,0,0,.18); }
+  #go:disabled { opacity: .6; pointer-events: none; animation: none; }
+
+  .hint {
+    font-size: clamp(11px, 2.4vw, 14px);
+    color: rgba(0,0,0,.4);
+    text-align: center;
+  }
+
+  /* ---------- confetti ---------- */
+  .confetti {
+    position: fixed;
+    top: -40px;
+    font-size: 30px;
+    animation: fall linear forwards;
+    z-index: 20;
+    pointer-events: none;
+  }
+  @keyframes fall {
+    to { transform: translateY(110vh) rotate(720deg); opacity: .9; }
+  }
+
+  /* ---------- game over overlay ---------- */
+  #overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(30, 40, 90, .55);
+    backdrop-filter: blur(4px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 30;
+  }
+  #overlay.show { display: flex; }
+  #overlay .box {
+    background: #fff;
+    border-radius: 36px;
+    padding: 30px 40px;
+    text-align: center;
+    box-shadow: 0 12px 0 rgba(0,0,0,.2);
+    animation: bannerpop .5s cubic-bezier(.2, 1.6, .4, 1) both;
+  }
+  #overlay .big { font-size: clamp(56px, 14vw, 100px); }
+  #overlay h2 { margin: 6px 0 2px; font-size: clamp(30px, 7vw, 48px); color: #333; }
+  #overlay .braininfo { color: #888; font-size: 16px; margin-bottom: 16px; }
+  #overlay button {
+    font-size: 26px;
+    font-weight: bold;
+    color: #fff;
+    background: #3ed46a;
+    border: 4px solid #fff;
+    border-radius: 40px;
+    padding: 12px 46px;
+    cursor: pointer;
+    box-shadow: 0 6px 0 rgba(0,0,0,.18);
+    font-family: inherit;
+  }
+  #overlay button:active { transform: translateY(4px); box-shadow: 0 2px 0 rgba(0,0,0,.18); }
+</style>
+</head>
+<body>
+
+<header>
+  <div></div>
+  <h1>🪨 📄 ✂️ SHOOT!</h1>
+  <button id="mute" title="sound on/off">🔊</button>
+</header>
+
+<section class="scoreboard">
+  <div class="score">😀 <span class="num" id="score-you">0</span></div>
+  <div class="score robo">🤖 <span class="num" id="score-robo">0</span></div>
+</section>
+
+<main>
+  <div id="stage">
+    <div class="slot" id="player-slot">?</div>
+    <div class="center">
+      <div id="fist">✊</div>
+      <div id="count">Pick your move!</div>
+    </div>
+    <div class="slot" id="robot-slot">?</div>
+  </div>
+
+  <div id="brain"><span>🤖 learning…</span><div class="bar"><div class="fill" id="brainfill"></div></div></div>
+</main>
+
+<footer>
+  <div class="cards">
+    <button class="card rock"  data-move="rock"><span>🪨</span><span class="word">ROCK</span></button>
+    <button class="card paper" data-move="paper"><span>📄</span><span class="word">PAPER</span></button>
+    <button class="card scissors" data-move="scissors"><span>✂️</span><span class="word">SCISSORS</span></button>
+  </div>
+  <button id="go">GO! 🚀</button>
+  <div class="hint">Tap a card to choose · then press <b>SPACE</b> or GO! &nbsp;·&nbsp; keys: 1 2 3</div>
+</footer>
+
+<div id="result"></div>
+<div id="overlay">
+  <div class="box">
+    <div class="big" id="over-emoji">🎉</div>
+    <h2 id="over-title">YOU WIN!</h2>
+    <div class="braininfo" id="over-brain"></div>
+    <button id="again">PLAY AGAIN! 🔄</button>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+/* ================= game rules ================= */
+const MOVES = ["rock", "paper", "scissors"];
+const CARD_EMOJI = { rock: "🪨", paper: "📄", scissors: "✂️" };
+const HAND_EMOJI = { rock: "✊", paper: "✋", scissors: "✌️" };
+const BEATEN_BY = { rock: "paper", paper: "scissors", scissors: "rock" }; // what beats X
+const BEATS     = { rock: "scissors", paper: "rock", scissors: "paper" }; // what X beats
+
+/* ================= sound (tiny synth, no files) ================= */
+let audio = null, muted = false;
+function beep(freq, dur, type = "sine", vol = 0.16, when = 0) {
+  if (muted) return;
+  try {
+    audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+    if (audio.state === "suspended") audio.resume();
+    const t0 = audio.currentTime + when;
+    const o = audio.createOscillator(), g = audio.createGain();
+    o.type = type; o.frequency.value = freq;
+    g.gain.setValueAtTime(vol, t0);
+    g.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
+    o.connect(g); g.connect(audio.destination);
+    o.start(t0); o.stop(t0 + dur + 0.02);
+  } catch (e) { /* no audio is fine */ }
+}
+const sfx = {
+  select: () => beep(660, 0.09, "triangle", 0.14),
+  count(n)  { beep(330 + n * 110, 0.14, "square", 0.12); },        // rising boops
+  shoot()   { beep(880, 0.28, "square", 0.16); beep(1760, 0.2, "sine", 0.08, 0.02); },
+  win()     { [523, 659, 784, 1047].forEach((f, i) => beep(f, 0.22, "triangle", 0.16, i * 0.13)); },
+  lose()    { [392, 330, 262].forEach((f, i) => beep(f, 0.28, "sine", 0.13, i * 0.18)); },
+  tie()     { beep(440, 0.12, "triangle", 0.14); beep(440, 0.12, "triangle", 0.14, 0.16); },
+  denied()  { beep(200, 0.18, "sawtooth", 0.1); },
+  cheer()   { [660, 880, 990, 1320].forEach((f, i) => beep(f, 0.25, "triangle", 0.16, i * 0.12)); },
+};
+
+/* ================= truly random pick (crypto, uniform) =================
+   2^32 - 1 is divisible by 3, so a single uint32 mod 3 is perfectly
+   uniform with zero bias. No Math.random anywhere near decisions. */
+function uniformRandom() {
+  const buf = new Uint32Array(1);
+  crypto.getRandomValues(buf);
+  return MOVES[buf[0] % 3];
+}
+
+/* ================= the learning computer ================= */
+let history = [];       // player's moves this session
+let outcomes = [];      // 'win' | 'lose' | 'tie' for the player
+let compMoves = [];     // what the computer played
+// Each session gets a random "smartness" (0.2 = mostly random, 0.85 = reads you well)
+let smartness = randomSmartness();
+
+function randomSmartness() {
+  const buf = new Uint32Array(1);
+  crypto.getRandomValues(buf);
+  return 0.2 + (buf[0] % 1000) / 1000 * 0.65; // 0.20 .. 0.85
+}
+
+function predictPlayerMove() {
+  if (history.length === 0) return null;
+  const last = history[history.length - 1];
+  const lastOutcome = outcomes[outcomes.length - 1];
+  const compLast = compMoves[compMoves.length - 1];
+  const score = { rock: 0, paper: 0, scissors: 0 };
+  const noise = () => Math.random() * 1.2; // tiny jitter so it's never robotic
+
+  // 1. overall tendency, recent moves weighted more
+  history.forEach((m, i) => { score[m] += 1 + (i / history.length) * 1.5; });
+
+  // 2. bigram: what does this player usually play right after <last>?
+  for (let i = 1; i < history.length; i++) {
+    if (history[i - 1] === last) score[history[i]] += 3.5;
+  }
+
+  // 3. reacts to the last result:
+  //    - won with X  -> likely to repeat X (win-stay)
+  //    - lost to X   -> likely to copy X (play what just beat them)
+  //    - tied with X -> might switch to the move that beats X
+  if (lastOutcome === "win") {
+    score[last] += 4;
+  } else if (lastOutcome === "lose") {
+    score[compLast] += 4;
+  } else {
+    score[BEATEN_BY[last]] += 2;
+  }
+
+  MOVES.forEach(m => { score[m] += noise(); });
+  return MOVES.reduce((best, m) => (score[m] > score[best] ? m : best), "rock");
+}
+
+function computerMove() {
+  if (history.length === 0) return uniformRandom();
+  // "thinks ahead": with probability = smartness, counter the predicted move;
+  // otherwise play a truly random throw.
+  if (Math.random() >= smartness) return uniformRandom();
+  const predicted = predictPlayerMove();
+  if (predicted === null) return uniformRandom();
+  return BEATEN_BY[predicted];
+}
+
+/* ================= UI state ================= */
+let state = "pick";                 // pick | countdown | reveal | gameover
+let selection = null;
+let you = 0, robo = 0;
+const GOAL = 3;
+
+const $ = (id) => document.getElementById(id);
+const fist = $("fist"), count = $("count"), result = $("result");
+const playerSlot = $("player-slot"), robotSlot = $("robot-slot");
+const cards = [...document.querySelectorAll(".card")];
+
+function setCountdownStep(text, isShoot) {
+  count.textContent = text;
+  count.classList.toggle("shoot", isShoot);
+}
+
+function startGame() {
+  if (state !== "pick") return;
+  if (!selection) {
+    sfx.denied();
+    count.textContent = "Pick a move first! ✨";
+    count.classList.add("wiggle");
+    setTimeout(() => count.classList.remove("wiggle"), 900);
+    cards.forEach(c => c.classList.add("wiggle"));
+    setTimeout(() => cards.forEach(c => c.classList.remove("wiggle")), 900);
+    return;
+  }
+  state = "countdown";
+  cards.forEach(c => c.disabled = true);
+  $("go").disabled = true;
+  playerSlot.textContent = "?";
+  robotSlot.textContent = "?";
+
+  const steps = ["ROCK", "PAPER", "SCISSORS"];
+  let i = 0;
+  fist.classList.add("bounce");
+  const step = () => {
+    if (i < steps.length) {
+      setCountdownStep(steps[i]);
+      sfx.count(i);
+      i++;
+      setTimeout(step, 700);
+    } else {
+      setCountdownStep("SHOOT!", true);
+      sfx.shoot();
+      playRound();
+    }
+  };
+  setTimeout(step, 700);
+}
+
+function playRound() {
+  const player = selection;
+  const comp = computerMove();
+  compMoves.push(comp);
+  history.push(player);
+
+  const outcome = player === comp ? "tie"
+    : BEATS[player] === comp ? "win" : "lose";
+  outcomes.push(outcome);
+
+  // fists fire! player slot pops the hand that was chosen
+  fist.classList.remove("bounce");
+  playerSlot.textContent = HAND_EMOJI[player];
+  playerSlot.querySelector(".tag")?.remove();
+  robotSlot.textContent = HAND_EMOJI[comp];
+  playerSlot.classList.remove("pop"); robotSlot.classList.remove("pop");
+  void playerSlot.offsetWidth; void robotSlot.offsetWidth;
+  playerSlot.classList.add("pop");
+  robotSlot.classList.add("pop");
+
+  if (outcome === "win") { you++; result.textContent = "YOU WIN! 🎉"; sfx.win(); confetti(); }
+  else if (outcome === "lose") { robo++; result.textContent = "ROBOT WINS 🤖"; sfx.lose(); }
+  else { result.textContent = "TIE! 🤝"; sfx.tie(); }
+  $("score-you").textContent = you;
+  $("score-robo").textContent = robo;
+  updateBrain();
+
+  result.classList.remove("show");
+  void result.offsetWidth;
+  result.classList.add("show");
+
+  state = "reveal";
+  setTimeout(() => {
+    if (you >= GOAL || robo >= GOAL) return gameOver();
+    state = "pick";
+    setCountdownStep("Pick your move!");
+    result.classList.remove("show");
+    cards.forEach(c => c.disabled = false);
+    $("go").disabled = false;
+  }, 3000);
+}
+
+/* brain meter — how much history the robot has seen */
+function updateBrain() {
+  $("brainfill").style.width = Math.min(100, history.length * 14) + "%";
+}
+
+function gameOver() {
+  state = "gameover";
+  result.classList.remove("show");
+  const won = you >= GOAL;
+  $("over-emoji").textContent = won ? "🏆🎉" : "🤖";
+  $("over-title").textContent = won ? "YOU WIN!" : "ROBOT WINS";
+  const stars = Math.max(1, Math.round(smartness * 5));
+  $("over-brain").textContent = `Robot brain this game: ${"⭐".repeat(stars)}${"☆".repeat(5 - stars)}`;
+  $("overlay").classList.add("show");
+  sfx.cheer();
+  if (won) confetti(50);
+}
+
+function resetGame() {
+  you = 0; robo = 0;
+  history = []; outcomes = []; compMoves = [];
+  smartness = randomSmartness(); // new session -> new difficulty
+  $("score-you").textContent = "0";
+  $("score-robo").textContent = "0";
+  $("brainfill").style.width = "0%";
+  $("overlay").classList.remove("show");
+  selection = null;
+  cards.forEach(c => { c.disabled = false; c.classList.remove("selected"); });
+  $("go").disabled = false;
+  setCountdownStep("Pick your move!");
+  state = "pick";
+}
+
+/* ================= confetti ================= */
+function confetti(n = 34) {
+  const emojis = ["🪨", "📄", "✂️", "⭐", "🌈", "🎉", "✨", "💖"];
+  for (let i = 0; i < n; i++) {
+    const d = document.createElement("div");
+    d.className = "confetti";
+    d.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+    d.style.left = Math.random() * 100 + "vw";
+    d.style.animationDuration = 1.2 + Math.random() * 1.3 + "s";
+    d.style.fontSize = 20 + Math.random() * 28 + "px";
+    d.style.animationDelay = Math.random() * 0.4 + "s";
+    document.body.appendChild(d);
+    setTimeout(() => d.remove(), 3200);
+  }
+}
+
+/* ================= input ================= */
+function pickMove(m) {
+  if (state !== "pick") return;
+  selection = m;
+  sfx.select();
+  cards.forEach(c => c.classList.toggle("selected", c.dataset.move === m));
+  count.textContent = CARD_EMOJI[m] + " — ready!";
+}
+
+cards.forEach(c => c.addEventListener("click", () => pickMove(c.dataset.move)));
+$("go").addEventListener("click", startGame);
+$("again").addEventListener("click", resetGame);
+$("overlay").addEventListener("click", (e) => { if (e.target === $("overlay")) resetGame(); });
+$("mute").addEventListener("click", () => {
+  muted = !muted;
+  $("mute").textContent = muted ? "🔇" : "🔊";
+});
+
+window.addEventListener("keydown", (e) => {
+  const k = e.key;
+  if (k === " ") { e.preventDefault(); startGame(); }
+  else if (k === "1" || k.toLowerCase() === "r") pickMove("rock");
+  else if (k === "2" || k.toLowerCase() === "p") pickMove("paper");
+  else if (k === "3" || k.toLowerCase() === "s") pickMove("scissors");
+  else if (k === "Enter" && state === "gameover") resetGame();
+});
+
+// test hooks (also used by the automated checks)
+window.__rps = {
+  MOVES, uniformRandom, predictPlayerMove, computerMove,
+  BEATEN_BY, BEATS,
+  get state() { return state; },
+  debug: {
+    setHistory(h, o, c) { history = h; outcomes = o; compMoves = c; },
+    setSmartness(s) { smartness = s; },
+  },
+};
+</script>
+</body>
+</html>
