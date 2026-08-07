@@ -229,26 +229,6 @@
   }
   .card:disabled { opacity: .55; pointer-events: none; }
 
-  #go {
-    font-size: clamp(30px, 7vw, 44px);
-    font-weight: bold;
-    color: #fff;
-    background: #3ed46a;
-    border: 5px solid #fff;
-    border-radius: 60px;
-    padding: 12px 70px;
-    cursor: pointer;
-    box-shadow: 0 7px 0 rgba(0,0,0,.18);
-    letter-spacing: 2px;
-    animation: gopulse 1.2s ease-in-out infinite;
-  }
-  @keyframes gopulse {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.05); }
-  }
-  #go:active { transform: translateY(5px); box-shadow: 0 2px 0 rgba(0,0,0,.18); }
-  #go:disabled { opacity: .6; pointer-events: none; animation: none; }
-
   .hint {
     font-size: clamp(11px, 2.4vw, 14px);
     color: rgba(0,0,0,.4);
@@ -283,27 +263,45 @@
   #overlay .box {
     background: #fff;
     border-radius: 36px;
-    padding: 30px 40px;
+    padding: 26px 34px;
     text-align: center;
     box-shadow: 0 12px 0 rgba(0,0,0,.2);
-    animation: bannerpop .5s cubic-bezier(.2, 1.6, .4, 1) both;
+    animation: boxpop .5s cubic-bezier(.2, 1.6, .4, 1) both;
+    max-width: min(92vw, 540px);
+    max-height: 88vh;
+    overflow-y: auto;
+  }
+  @keyframes boxpop {
+    0% { transform: scale(0) rotate(-6deg); }
+    70% { transform: scale(1.05) rotate(1deg); }
+    100% { transform: scale(1) rotate(0); }
   }
   #overlay .big { font-size: clamp(56px, 14vw, 100px); }
   #overlay h2 { margin: 6px 0 2px; font-size: clamp(30px, 7vw, 48px); color: #333; }
-  #overlay .braininfo { color: #888; font-size: 16px; margin-bottom: 16px; }
-  #overlay button {
-    font-size: 26px;
+  #overlay h3 { margin: 14px 0 4px; font-size: 19px; color: #555; }
+  #overlay .braininfo { color: #888; font-size: 15px; margin-bottom: 4px; }
+  .btnrow { display: flex; gap: 10px; justify-content: center; margin-top: 14px; flex-wrap: wrap; }
+  #overlay .btn {
+    font-size: 17px;
     font-weight: bold;
-    color: #fff;
-    background: #3ed46a;
+    color: #5b7cfa;
+    background: #eef2ff;
     border: 4px solid #fff;
-    border-radius: 40px;
-    padding: 12px 46px;
+    border-radius: 30px;
+    padding: 10px 22px;
     cursor: pointer;
-    box-shadow: 0 6px 0 rgba(0,0,0,.18);
+    box-shadow: 0 5px 0 rgba(0,0,0,.15);
     font-family: inherit;
   }
-  #overlay button:active { transform: translateY(4px); box-shadow: 0 2px 0 rgba(0,0,0,.18); }
+  #overlay .btn:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0,0,0,.15); }
+  #overlay .btn.green { color: #fff; background: #3ed46a; }
+  .rep-stats { font-size: 14px; color: #aaa; margin-bottom: 4px; }
+  .rep-row { text-align: left; margin: 8px 0 2px; font-size: 15px; color: #444; }
+  .rep-row .bar { display: inline-block; vertical-align: middle; width: 110px; height: 12px; background: #eee; border-radius: 8px; overflow: hidden; border: 2px solid #fff; margin-left: 6px; }
+  .rep-row .fill { height: 100%; width: 0%; background: linear-gradient(90deg, #ff7a00, #ffd93d); border-radius: 6px; transition: width .6s; }
+  #overlay ul { text-align: left; margin: 6px 0 2px; padding-left: 22px; font-size: 14.5px; color: #444; }
+  #overlay ul li { margin: 4px 0; }
+  .kidbox { text-align: left; background: #fff8d9; border: 3px solid #ffe28a; border-radius: 16px; padding: 10px 14px; font-size: 14.5px; color: #7a5c00; margin-top: 10px; }
 </style>
 </head>
 <body>
@@ -324,7 +322,7 @@
     <div class="slot" id="player-slot">?</div>
     <div class="center">
       <div id="fist">✊</div>
-      <div id="count">Pick your move!</div>
+      <div id="count">Tap a move to play! 👇</div>
     </div>
     <div class="slot" id="robot-slot">?</div>
   </div>
@@ -338,17 +336,37 @@
     <button class="card paper" data-move="paper"><span>📄</span><span class="word">PAPER</span></button>
     <button class="card scissors" data-move="scissors"><span>✂️</span><span class="word">SCISSORS</span></button>
   </div>
-  <button id="go">GO! 🚀</button>
-  <div class="hint">Tap a card to choose · then press <b>SPACE</b> or GO! &nbsp;·&nbsp; keys: 1 2 3</div>
+  <div class="hint">Tap a card to play! &nbsp;·&nbsp; keys: 1 2 3 (or R P S)</div>
 </footer>
 
 <div id="result"></div>
 <div id="overlay">
   <div class="box">
-    <div class="big" id="over-emoji">🎉</div>
-    <h2 id="over-title">YOU WIN!</h2>
-    <div class="braininfo" id="over-brain"></div>
-    <button id="again">PLAY AGAIN! 🔄</button>
+    <div id="screen-main">
+      <div class="big" id="over-emoji">🎉</div>
+      <h2 id="over-title">YOU WIN!</h2>
+      <div class="braininfo" id="over-brain"></div>
+      <div class="btnrow">
+        <button class="btn" id="report-btn">HOW YOU PLAY 📊</button>
+        <button class="btn green" id="again">PLAY AGAIN 🔄</button>
+      </div>
+    </div>
+    <div id="screen-report" hidden>
+      <h3>🧠 HOW YOU PLAY</h3>
+      <div class="rep-stats" id="rep-stats"></div>
+      <div class="rep-row">The robot could guess your move: <b id="rep-pred">0%</b>
+        <div class="bar"><div class="fill" id="rep-predfill"></div></div>
+      </div>
+      <div class="rep-row">Button mashing: <b id="rep-mash"></b></div>
+      <ul id="rep-patterns"></ul>
+      <h3>🎯 HOW TO BEAT THE ROBOT</h3>
+      <ul id="rep-advice"></ul>
+      <div class="kidbox">💬 <span id="rep-kid"></span></div>
+      <div class="btnrow">
+        <button class="btn" id="back-btn">← BACK</button>
+        <button class="btn green" id="again2">PLAY AGAIN 🔄</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -384,7 +402,6 @@ const sfx = {
   win()     { [523, 659, 784, 1047].forEach((f, i) => beep(f, 0.22, "triangle", 0.16, i * 0.13)); },
   lose()    { [392, 330, 262].forEach((f, i) => beep(f, 0.28, "sine", 0.13, i * 0.18)); },
   tie()     { beep(440, 0.12, "triangle", 0.14); beep(440, 0.12, "triangle", 0.14, 0.16); },
-  denied()  { beep(200, 0.18, "sawtooth", 0.1); },
   cheer()   { [660, 880, 990, 1320].forEach((f, i) => beep(f, 0.25, "triangle", 0.16, i * 0.12)); },
 };
 
@@ -410,20 +427,20 @@ function randomSmartness() {
   return 0.2 + (buf[0] % 1000) / 1000 * 0.65; // 0.20 .. 0.85
 }
 
-function predictPlayerMove() {
-  if (history.length === 0) return null;
-  const last = history[history.length - 1];
-  const lastOutcome = outcomes[outcomes.length - 1];
-  const compLast = compMoves[compMoves.length - 1];
+function computePrediction(hist, outs, comps) {
+  if (hist.length === 0) return null;
+  const last = hist[hist.length - 1];
+  const lastOutcome = outs[outs.length - 1];
+  const compLast = comps[comps.length - 1];
   const score = { rock: 0, paper: 0, scissors: 0 };
   const noise = () => Math.random() * 1.2; // tiny jitter so it's never robotic
 
   // 1. overall tendency, recent moves weighted more
-  history.forEach((m, i) => { score[m] += 1 + (i / history.length) * 1.5; });
+  hist.forEach((m, i) => { score[m] += 1 + (i / hist.length) * 1.5; });
 
   // 2. bigram: what does this player usually play right after <last>?
-  for (let i = 1; i < history.length; i++) {
-    if (history[i - 1] === last) score[history[i]] += 3.5;
+  for (let i = 1; i < hist.length; i++) {
+    if (hist[i - 1] === last) score[hist[i]] += 3.5;
   }
 
   // 3. reacts to the last result:
@@ -442,6 +459,8 @@ function predictPlayerMove() {
   return MOVES.reduce((best, m) => (score[m] > score[best] ? m : best), "rock");
 }
 
+function predictPlayerMove() { return computePrediction(history, outcomes, compMoves); }
+
 function computerMove() {
   if (history.length === 0) return uniformRandom();
   // "thinks ahead": with probability = smartness, counter the predicted move;
@@ -452,11 +471,122 @@ function computerMove() {
   return BEATEN_BY[predicted];
 }
 
+/* ================= behavior report =================
+   Reads the session's history and describes HOW the player thinks:
+   random mashing vs. habits/fallacies, how readable they were, and
+   what to practice — including a line to say to the child. */
+function buildReport(hist, outs, comps) {
+  const n = hist.length;
+  const counts = { rock: 0, paper: 0, scissors: 0 };
+  hist.forEach(m => counts[m]++);
+  const pct = m => (n ? Math.round((counts[m] / n) * 100) : 0);
+
+  let fav = "rock", favPct = 0;
+  MOVES.forEach(m => { if (pct(m) >= favPct) { favPct = pct(m); fav = m; } });
+
+  // how often the robot's own predictor would have guessed right, round by round
+  let correct = 0;
+  for (let i = 1; i < n; i++) {
+    if (computePrediction(hist.slice(0, i), outs.slice(0, i), comps.slice(0, i)) === hist[i]) correct++;
+  }
+  const predictability = n > 1 ? Math.round((correct / (n - 1)) * 100) : 0;
+
+  // how evenly the throws are spread (100 = perfectly uniform)
+  const dev = MOVES.reduce((s, m) => s + Math.abs(counts[m] - n / 3), 0);
+  const uniformity = n > 1 ? Math.max(0, Math.round(100 * (1 - dev / (2 * n / 3)))) : 0;
+  // mashing = uniform AND hard to predict
+  let mashing = Math.round((uniformity + (100 - predictability)) / 2);
+
+  // conditional habits: win-stay / lose-switch / tie-switch / copy-after-lose
+  const rate = (cond, same, copy) => {
+    let c = 0, total = 0;
+    for (let i = 1; i < n; i++) {
+      if (!cond(outs[i - 1])) continue;
+      total++;
+      const hit = copy ? hist[i] === comps[i - 1]
+        : same ? hist[i] === hist[i - 1]
+               : hist[i] !== hist[i - 1];
+      if (hit) c++;
+    }
+    return total >= 2 ? Math.round((c / total) * 100) : null;
+  };
+  const winStay = rate(o => o === "win", true, false);
+  const loseSwitch = rate(o => o === "lose", false, false);
+  const tieSwitch = rate(o => o === "tie", false, false);
+  const copyAfterLose = rate(o => o === "lose", false, true);
+
+  // repeating rhythm (period 2 or 3), e.g. rock → paper → scissors → rock…
+  let cycle = null;
+  for (const L of [2, 3]) {
+    if (n - L < 1) continue;
+    let matches = 0;
+    for (let i = L; i < n; i++) if (hist[i] === hist[i - L]) matches++;
+    const fit = matches / (n - L);
+    const seq = hist.slice(-L);
+    // a "rhythm" needs at least two different moves (all-rock is just a favorite)
+    if (fit >= 0.7 && new Set(seq).size > 1) { cycle = { seq, fit }; break; }
+  }
+  const cycleEmojis = cycle ? cycle.seq.map(m => CARD_EMOJI[m]).join("") : "";
+  // following a rhythm is the opposite of button mashing
+  if (cycle) mashing = Math.min(mashing, 45);
+
+  const patterns = [];
+  if (favPct >= 55) patterns.push(`You have a favorite: ${CARD_EMOJI[fav]} ${fav} — ${favPct}% of all throws`);
+  if (cycle) patterns.push(`You play a rhythm: ${cycleEmojis}${cycleEmojis}… (matches ${Math.round(cycle.fit * 100)}% of the time)`);
+  if (winStay >= 60) patterns.push(`After a win you throw the same again (${winStay}%)`);
+  if (loseSwitch >= 60) patterns.push(`After a loss you switch moves (${loseSwitch}%)`);
+  if (tieSwitch >= 60) patterns.push(`After a tie you switch (${tieSwitch}%) — ties don't mean change is due!`);
+  if (copyAfterLose >= 50) patterns.push(`After a loss you copy what the robot threw (${copyAfterLose}%)`);
+  if (!patterns.length) patterns.push("No strong habits — every throw was a fresh surprise");
+
+  const advice = [];
+  if (predictability >= 50) advice.push(`The robot guessed your next move ${predictability}% of the time. Mix up your throws more!`);
+  if (mashing >= 66) advice.push("Mostly random button mashing — try a plan: watch the robot's last throw and play what beats it.");
+  if (favPct >= 55) advice.push(`You lean on ${CARD_EMOJI[fav]} ${fav}. Spread your throws across all three.`);
+  if (cycle) advice.push("Break your rhythm — start a round with a move that's not 'next in the pattern'.");
+  if (winStay >= 60) advice.push("After a win, sometimes don't repeat. Surprise the robot!");
+  if (loseSwitch >= 60) advice.push("After a loss, sometimes keep the same move — the robot expects a switch.");
+  if (tieSwitch >= 60) advice.push("After a tie, switch only when you mean to. Make it a choice, not a habit.");
+  if (copyAfterLose >= 50) advice.push("Don't copy the robot's last throw — it is waiting for exactly that.");
+  if (!advice.length) advice.push("You're unpredictable — keep it up, the robot can't read you.");
+  advice.length = Math.min(advice.length, 3); // keep the report scannable
+
+  const mashLabel = mashing >= 66 ? "HIGH — button mashing! 🌀"
+    : mashing >= 34 ? "MEDIUM — some habits, some randomness"
+    : "LOW — clear habits the robot can see";
+
+  let kid;
+  if (mashing >= 66) kid = "You pressed buttons super fast! Next time think: what would beat the robot's last move?";
+  else if (cycle) kid = `You made a pattern (${cycleEmojis}…) — the robot danced along! Break the pattern to trick it.`;
+  else if (favPct >= 55) kid = `You really like ${CARD_EMOJI[fav]}! The robot noticed. Try all three hands.`;
+  else if (winStay >= 60) kid = "When you win, you stay — robots love that. Mix it up!";
+  else if (loseSwitch >= 60) kid = "When you lose, you change — that's smart! But the robot knows, so sometimes don't.";
+  else if (tieSwitch >= 60) kid = "After a tie you change — but ties aren't losses. Keep your hand sometimes!";
+  else if (copyAfterLose >= 50) kid = "You copy the robot when you lose — it expects that. Surprise it!";
+  else if (predictability >= 50) kid = "The robot was reading your hands! Change what you throw more often.";
+  else kid = "You're tricky! The robot had to think really hard about you.";
+
+  return { n, predictability, mashing, mashLabel, patterns, advice, kid };
+}
+
+function renderReport() {
+  const rep = buildReport(history, outcomes, compMoves);
+  $("rep-stats").textContent = `${rep.n} rounds · you ${you} — robot ${robo}`;
+  $("rep-pred").textContent = rep.predictability + "%";
+  $("rep-predfill").style.width = rep.predictability + "%";
+  $("rep-mash").textContent = rep.mashLabel;
+  $("rep-patterns").innerHTML = "";
+  rep.patterns.forEach(p => { const li = document.createElement("li"); li.textContent = p; $("rep-patterns").appendChild(li); });
+  $("rep-advice").innerHTML = "";
+  rep.advice.forEach(a => { const li = document.createElement("li"); li.textContent = a; $("rep-advice").appendChild(li); });
+  $("rep-kid").textContent = rep.kid;
+}
+
 /* ================= UI state ================= */
 let state = "pick";                 // pick | countdown | reveal | gameover
 let selection = null;
 let you = 0, robo = 0;
-const GOAL = 3;
+const GOAL = 10;                    // first to 10 wins
 
 const $ = (id) => document.getElementById(id);
 const fist = $("fist"), count = $("count"), result = $("result");
@@ -470,18 +600,8 @@ function setCountdownStep(text, isShoot) {
 
 function startGame() {
   if (state !== "pick") return;
-  if (!selection) {
-    sfx.denied();
-    count.textContent = "Pick a move first! ✨";
-    count.classList.add("wiggle");
-    setTimeout(() => count.classList.remove("wiggle"), 900);
-    cards.forEach(c => c.classList.add("wiggle"));
-    setTimeout(() => cards.forEach(c => c.classList.remove("wiggle")), 900);
-    return;
-  }
   state = "countdown";
   cards.forEach(c => c.disabled = true);
-  $("go").disabled = true;
   playerSlot.textContent = "?";
   robotSlot.textContent = "?";
 
@@ -542,12 +662,11 @@ function playRound() {
   setTimeout(() => {
     if (you >= GOAL || robo >= GOAL) return gameOver();
     state = "pick";
-    setCountdownStep("Pick your move!");
+    setCountdownStep("Tap a move to play!");
     fist.textContent = "✊";
     fist.classList.remove("shot");
     result.classList.remove("show");
     cards.forEach(c => c.disabled = false);
-    $("go").disabled = false;
   }, 3000);
 }
 
@@ -563,7 +682,9 @@ function gameOver() {
   $("over-emoji").textContent = won ? "🏆🎉" : "🤖";
   $("over-title").textContent = won ? "YOU WIN!" : "ROBOT WINS";
   const stars = Math.max(1, Math.round(smartness * 5));
-  $("over-brain").textContent = `Robot brain this game: ${"⭐".repeat(stars)}${"☆".repeat(5 - stars)}`;
+  $("over-brain").textContent = `You ${you} — robot ${robo} · brain ${"⭐".repeat(stars)}${"☆".repeat(5 - stars)}`;
+  $("screen-main").hidden = false;
+  $("screen-report").hidden = true;
   $("overlay").classList.add("show");
   sfx.cheer();
   if (won) confetti(50);
@@ -577,12 +698,13 @@ function resetGame() {
   $("score-robo").textContent = "0";
   $("brainfill").style.width = "0%";
   $("overlay").classList.remove("show");
+  $("screen-main").hidden = false;
+  $("screen-report").hidden = true;
   selection = null;
   fist.textContent = "✊";
   fist.classList.remove("shot");
   cards.forEach(c => { c.disabled = false; c.classList.remove("selected"); });
-  $("go").disabled = false;
-  setCountdownStep("Pick your move!");
+  setCountdownStep("Tap a move to play!");
   state = "pick";
 }
 
@@ -608,12 +730,22 @@ function pickMove(m) {
   selection = m;
   sfx.select();
   cards.forEach(c => c.classList.toggle("selected", c.dataset.move === m));
-  count.textContent = CARD_EMOJI[m] + " — ready!";
+  count.textContent = CARD_EMOJI[m] + " — here we go!";
+  startGame(); // picking a move IS the start — no spacebar needed
 }
 
 cards.forEach(c => c.addEventListener("click", () => pickMove(c.dataset.move)));
-$("go").addEventListener("click", startGame);
 $("again").addEventListener("click", resetGame);
+$("again2").addEventListener("click", resetGame);
+$("report-btn").addEventListener("click", () => {
+  renderReport();
+  $("screen-main").hidden = true;
+  $("screen-report").hidden = false;
+});
+$("back-btn").addEventListener("click", () => {
+  $("screen-main").hidden = false;
+  $("screen-report").hidden = true;
+});
 $("overlay").addEventListener("click", (e) => { if (e.target === $("overlay")) resetGame(); });
 $("mute").addEventListener("click", () => {
   muted = !muted;
@@ -621,12 +753,10 @@ $("mute").addEventListener("click", () => {
 });
 
 window.addEventListener("keydown", (e) => {
-  const k = e.key;
-  if (k === " ") { e.preventDefault(); startGame(); }
-  else if (k === "1" || k.toLowerCase() === "r") pickMove("rock");
-  else if (k === "2" || k.toLowerCase() === "p") pickMove("paper");
-  else if (k === "3" || k.toLowerCase() === "s") pickMove("scissors");
-  else if (k === "Enter" && state === "gameover") resetGame();
+  const k = e.key.toLowerCase();
+  if (k === "1" || k === "r") pickMove("rock");
+  else if (k === "2" || k === "p") pickMove("paper");
+  else if (k === "3" || k === "s") pickMove("scissors");
 });
 
 // test hooks (also used by the automated checks)
@@ -637,6 +767,8 @@ window.__rps = {
   debug: {
     setHistory(h, o, c) { history = h; outcomes = o; compMoves = c; },
     setSmartness(s) { smartness = s; },
+    buildReport,
+    endGame() { you = GOAL; gameOver(); },
   },
 };
 </script>
