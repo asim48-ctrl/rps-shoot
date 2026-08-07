@@ -257,6 +257,15 @@
   #overlay ul { text-align: left; margin: 6px 0 2px; padding-left: 22px; font-size: 14.5px; color: #444; }
   #overlay ul li { margin: 4px 0; }
   .kidbox { text-align: left; background: #fff8d9; border: 3px solid #ffe28a; border-radius: 16px; padding: 10px 14px; font-size: 14.5px; color: #7a5c00; margin-top: 10px; }
+  /* parent insights */
+  #p-overview { text-align: left; font-size: 13.5px; color: #444; margin: 8px 0 4px; }
+  .p-construct { text-align: left; border: 3px solid #dde4ff; border-radius: 14px; padding: 8px 12px; margin: 8px 0; background: #f7f9ff; }
+  .p-construct .p-name { font-weight: bold; color: #4a63d6; font-size: 14px; }
+  .p-construct .p-evidence { color: #8a8a9a; font-size: 12px; margin: 2px 0; }
+  .p-construct .p-interp { color: #333; font-size: 13px; }
+  .p-construct.notable { border-color: #ffd93d; background: #fffbe8; }
+  .p-construct.notable .p-name { color: #b07d00; }
+  .p-note { text-align: left; background: #f0f0f5; border: 3px solid #d8d8e5; border-radius: 16px; padding: 8px 12px; font-size: 11.5px; color: #666; margin-top: 10px; }
 </style>
 </head>
 <body>
@@ -299,6 +308,7 @@
       <div class="braininfo" id="over-brain"></div>
       <div class="btnrow">
         <button class="btn" id="report-btn">HOW YOU PLAY 📊</button>
+        <button class="btn" id="parent-btn">PARENT INSIGHTS 🧠</button>
         <button class="btn green" id="again">PLAY AGAIN 🔄</button>
       </div>
     </div>
@@ -316,6 +326,19 @@
       <div class="btnrow">
         <button class="btn" id="back-btn">← BACK</button>
         <button class="btn green" id="again2">PLAY AGAIN 🔄</button>
+      </div>
+    </div>
+    <div id="screen-parent" hidden>
+      <h3>🧠 PARENT INSIGHTS</h3>
+      <div class="rep-stats" id="p-stats"></div>
+      <div id="p-overview"></div>
+      <div id="p-constructs"></div>
+      <h3>🎯 TRY WITH YOUR CHILD</h3>
+      <ul id="p-tips"></ul>
+      <div class="p-note" id="p-note"></div>
+      <div class="btnrow">
+        <button class="btn" id="p-back">← BACK</button>
+        <button class="btn green" id="again3">PLAY AGAIN 🔄</button>
       </div>
     </div>
   </div>
@@ -437,6 +460,48 @@ function computerMove() {
    Reads the session's history and describes HOW the player thinks:
    random mashing vs. habits/fallacies, how readable they were, and
    what to practice — including a line to say to the child. */
+/* shared habit detection: rates as {pct, total} | null */
+function computeHabits(hist, outs, comps) {
+  const n = hist.length;
+  const rate = (cond, same, copy) => {
+    let c = 0, total = 0;
+    for (let i = 1; i < n; i++) {
+      if (!cond(outs[i - 1])) continue;
+      total++;
+      const hit = copy ? hist[i] === comps[i - 1]
+        : same ? hist[i] === hist[i - 1]
+               : hist[i] !== hist[i - 1];
+      if (hit) c++;
+    }
+    return total < 3 ? null : { pct: Math.round((c / total) * 100), total };
+  };
+  let beatLast = null;
+  if (n >= 4) {
+    let c = 0;
+    for (let i = 1; i < n; i++) if (hist[i] === BEATS[comps[i - 1]]) c++;
+    beatLast = { pct: Math.round((c / (n - 1)) * 100), total: n - 1 };
+  }
+  // repeating rhythm (period 2 or 3), e.g. rock → paper → scissors → rock…
+  let cycle = null;
+  for (const L of [2, 3]) {
+    if (n - L < 1) continue;
+    let matches = 0;
+    for (let i = L; i < n; i++) if (hist[i] === hist[i - L]) matches++;
+    const fit = matches / (n - L);
+    const seq = hist.slice(-L);
+    // a "rhythm" needs at least two different moves (all-rock is just a favorite)
+    if (fit >= 0.7 && new Set(seq).size > 1) { cycle = { seq, fit }; break; }
+  }
+  return {
+    winStay: rate(o => o === "win", true, false),
+    loseSwitch: rate(o => o === "lose", false, false),
+    loseStay: rate(o => o === "lose", true, false),
+    tieSwitch: rate(o => o === "tie", false, false),
+    copyAfterLose: rate(o => o === "lose", false, true),
+    beatLast, cycle,
+  };
+}
+
 function buildReport(hist, outs, comps) {
   const n = hist.length;
   const counts = { rock: 0, paper: 0, scissors: 0 };
@@ -463,42 +528,7 @@ function buildReport(hist, outs, comps) {
   // conditional habits: {pct, total} | null. NOTE: switching after a
   // loss/tie is the RANDOM default (2/3), so those need ~85%+ to count;
   // everything else 60%+.
-  const rate = (cond, same, copy) => {
-    let c = 0, total = 0;
-    for (let i = 1; i < n; i++) {
-      if (!cond(outs[i - 1])) continue;
-      total++;
-      const hit = copy ? hist[i] === comps[i - 1]
-        : same ? hist[i] === hist[i - 1]
-               : hist[i] !== hist[i - 1];
-      if (hit) c++;
-    }
-    return total < 3 ? null : { pct: Math.round((c / total) * 100), total };
-  };
-  const winStay = rate(o => o === "win", true, false);
-  const loseSwitch = rate(o => o === "lose", false, false);
-  const loseStay = rate(o => o === "lose", true, false);
-  const tieSwitch = rate(o => o === "tie", false, false);
-  const copyAfterLose = rate(o => o === "lose", false, true);
-  // counter-reactive: does the player beat the robot's last throw?
-  let beatLast = null;
-  if (n >= 4) {
-    let c = 0;
-    for (let i = 1; i < n; i++) if (hist[i] === BEATS[comps[i - 1]]) c++;
-    beatLast = { pct: Math.round((c / (n - 1)) * 100), total: n - 1 };
-  }
-
-  // repeating rhythm (period 2 or 3), e.g. rock → paper → scissors → rock…
-  let cycle = null;
-  for (const L of [2, 3]) {
-    if (n - L < 1) continue;
-    let matches = 0;
-    for (let i = L; i < n; i++) if (hist[i] === hist[i - L]) matches++;
-    const fit = matches / (n - L);
-    const seq = hist.slice(-L);
-    // a "rhythm" needs at least two different moves (all-rock is just a favorite)
-    if (fit >= 0.7 && new Set(seq).size > 1) { cycle = { seq, fit }; break; }
-  }
+  const { winStay, loseSwitch, loseStay, tieSwitch, copyAfterLose, beatLast, cycle } = computeHabits(hist, outs, comps);
   const cycleEmojis = cycle ? cycle.seq.map(m => CARD_EMOJI[m]).join("") : "";
 
   const patterns = [];
@@ -560,7 +590,7 @@ function buildReport(hist, outs, comps) {
   else if (predictability >= 50) kid = "The robot was reading your hands! Change what you throw more often.";
   else kid = "You're tricky! The robot had to think really hard about you.";
 
-  return { n, predictability, mashing, mashLabel, patterns, advice, kid };
+  return { n, predictability, mashing, mashLabel, patterns, advice, kid, habits: { winStay, loseSwitch, loseStay, tieSwitch, copyAfterLose, beatLast, cycle } };
 }
 
 function renderReport() {
@@ -574,6 +604,129 @@ function renderReport() {
   $("rep-advice").innerHTML = "";
   rep.advice.forEach(a => { const li = document.createElement("li"); li.textContent = a; $("rep-advice").appendChild(li); });
   $("rep-kid").textContent = rep.kid;
+}
+
+/* ================= parent insights (adult-facing report) =================
+   Professional behavioral observation, framed around established constructs
+   from decision-making research: reinforcement sensitivity (win-stay /
+   lose-shift), negative recency, opponent modeling, perseveration vs.
+   flexibility, and strategy coherence. Deliberately NOT a diagnostic tool. */
+function buildParentReport(hist, outs, comps) {
+  const n = hist.length;
+  const rep = buildReport(hist, outs, comps);
+  const h = rep.habits;
+  const counts = { rock: 0, paper: 0, scissors: 0 };
+  hist.forEach(m => counts[m]++);
+  const pct = m => Math.round((counts[m] / n) * 100);
+  const wins = outs.filter(o => o === "win").length;
+  const losses = outs.filter(o => o === "lose").length;
+  const ties = outs.filter(o => o === "tie").length;
+
+  // after two straight losses, how often does the child change move?
+  let streakSwitch = null;
+  let c = 0, t = 0;
+  for (let i = 2; i < n; i++) {
+    if (outs[i - 2] === "lose" && outs[i - 1] === "lose") { t++; if (hist[i] !== hist[i - 1]) c++; }
+  }
+  if (t >= 2) streakSwitch = Math.round((c / t) * 100);
+  let repeats = 0;
+  for (let i = 1; i < n; i++) if (hist[i] === hist[i - 1]) repeats++;
+  const repeatRate = n > 1 ? Math.round((repeats / (n - 1)) * 100) : 0;
+  const favPct = Math.max(...MOVES.map(m => pct(m)));
+
+  const constructs = [];
+  const P = (name, evidence, interp, flag) => constructs.push({ name, evidence, interp, flag });
+
+  P("Reinforcement sensitivity — win-stay / lose-shift",
+    `Repeats a winning move ${h.winStay ? h.winStay.pct + "%" : "n/a"} of the time; changes after a loss ${h.loseSwitch ? h.loseSwitch.pct + "%" : "n/a"} of the time.`,
+    (h.winStay?.pct >= 70 || h.loseSwitch?.pct >= 90)
+      ? "Outcome-driven responding: choices track wins and losses closely — the classic win-stay / lose-shift signature of reinforcement learning. The child is engaged with feedback rather than playing on autopilot."
+      : "Outcome feedback influences choices only mildly; play appears driven more by internal scripts or exploration than by the scoreboard.",
+    (h.winStay?.pct >= 70 || h.loseSwitch?.pct >= 90) ? "notable" : "typical");
+
+  const recency = h.tieSwitch?.pct >= 85 || streakSwitch >= 80;
+  P("Negative recency — the “change is due” bias",
+    `Changes after a tie ${h.tieSwitch ? h.tieSwitch.pct + "%" : "n/a"} of the time; after two straight losses, switches ${streakSwitch ? streakSwitch + "%" : "n/a"} of the time.`,
+    recency
+      ? "Tendency to expect outcomes to balance out after neutral or bad results. Negative recency (the gambler's fallacy) is among the most common reasoning biases in adults; in a young child it shows probability intuition still heavily weighted toward the most recent events."
+      : "No strong tendency to expect change after ties or losses — fewer “change is due” expectations than is common.",
+    recency ? "notable" : "typical");
+
+  const opp = h.beatLast?.pct ?? 33;
+  P("Opponent modeling — reading the other player",
+    `Beat the robot's previous throw ${h.beatLast ? h.beatLast.pct + "%" : "n/a"} of the time (chance ≈ 33%).`,
+    opp >= 60
+      ? "Anticipates and counters the opponent's last action — level-1 opponent modeling. For a child of ~4, whose perspective-taking is still emerging, this is an early and sophisticated strategic signal."
+      : opp <= 40 && n >= 10
+        ? "Little evidence of watching the opponent; play is mostly self-directed. Typical for this age — reading another player's actions develops with practice and guided play."
+        : "Moderate sensitivity to the opponent's previous move — early signs of counter-play.",
+    opp >= 60 ? "notable" : "typical");
+
+  P("Perseveration vs. deliberate repetition",
+    `Keeps the same move after a loss ${h.loseStay ? h.loseStay.pct + "%" : "n/a"} of the time; overall repeat rate ${repeatRate}%.`,
+    h.loseStay?.pct >= 70
+      ? "Holds the same move after losing. Two readings: deliberate trap-breaking (intentionally frustrating the opponent's prediction) or perseverative responding (difficulty shifting after negative feedback). Watch whether the child shows intent — smiling, narrating — when repeating; both readings are developmentally normal."
+      : "Shifts readily after losses — good cognitive flexibility with minimal perseveration.",
+    h.loseStay?.pct >= 70 ? "notable" : "typical");
+
+  P("Strategy coherence — readability",
+    `A predictive model of the child's choices was correct ${rep.predictability}% of the time (chance ≈ 33%).`,
+    rep.predictability >= 50
+      ? "Highly readable, consistent play — stable habits such as a favorite move or fixed responses after outcomes. Consistent rule use is a normal milestone at this age."
+      : rep.predictability <= 35
+        ? "Play is hard to model — exploratory or deliberately varied. Developmentally this usually reflects exploration rather than strategy, though it is genuinely strong play."
+        : "Moderately readable — a mix of habits and variation.",
+    rep.predictability >= 50 ? "notable" : "typical");
+
+  P("Response style — systematic vs. exploratory",
+    `Move usage: 🪨 ${pct("rock")}% · 📄 ${pct("paper")}% · ✂️ ${pct("scissors")}%. Estimated random/exploratory component: ${rep.mashing}%.`,
+    rep.mashing >= 66
+      ? "Largely random responding — consistent with exploration or attention drift. Both are typical for sustained play at this age; shorter sessions often sharpen focus."
+      : rep.mashing <= 45
+        ? "Systematic responding with identifiable habits — the child is likely playing by rules they can articulate when asked."
+        : "Mixed responding — some habits, some exploration.",
+    rep.mashing <= 45 || rep.mashing >= 66 ? "notable" : "typical");
+
+  // overall picture
+  const notable = constructs.filter(x => x.flag === "notable");
+  const parts = [];
+  if (h.beatLast?.pct >= 60) parts.push("emerging opponent awareness");
+  if (rep.predictability >= 50) parts.push("consistent rule-based responding");
+  if (rep.mashing >= 66) parts.push("largely exploratory responding");
+  if (h.loseStay?.pct >= 70) parts.push("repetition after losses (deliberate or perseverative)");
+  if (!parts.length) parts.push("a typical mix of habits and exploration");
+  const overview = (notable.length
+    ? `Most notable: ${notable.map(x => x.name.split(" — ")[0]).join("; ")}. `
+    : "No single dominant pattern — varied, age-typical play. ") +
+    `Overall, play shows ${parts.join(", ")}.`;
+
+  const tips = [];
+  if (rep.mashing >= 66) tips.push("Play “copy the robot” rounds: name the robot's move before it lands, then throw the same. Builds observation before reaction.");
+  if (rep.predictability >= 50 || favPct >= 55) tips.push("Play “surprise rounds”: the rule is you may NOT throw the same move twice in a row.");
+  if (recency) tips.push("Narrate your own thinking out loud: “I bet you'll throw rock again — you just won with it — so I'll throw paper.”");
+  if (opp >= 60) tips.push("Raise the challenge: before the countdown, ask “the robot saw you beat paper — what will it do now?”");
+  tips.push("Let your child call the countdown (“rock, paper, scissors, SHOOT!”) — leading the rhythm builds impulse timing.");
+  if (tips.length > 4) tips.length = 4;
+
+  return { n, wins, losses, ties, constructs, overview, tips };
+}
+
+function renderParentReport() {
+  const pr = buildParentReport(history, outcomes, compMoves);
+  const stars = Math.max(1, Math.round(smartness * 5));
+  $("p-stats").textContent =
+    `${pr.n} rounds · ${pr.wins}–${pr.losses}–${pr.ties} (W–L–T) · robot brain ${"⭐".repeat(stars)}${"☆".repeat(5 - stars)}`;
+  $("p-overview").textContent = pr.overview;
+  $("p-constructs").innerHTML = "";
+  pr.constructs.forEach(x => {
+    const div = document.createElement("div");
+    div.className = "p-construct" + (x.flag === "notable" ? " notable" : "");
+    div.innerHTML = `<div class="p-name">${x.name}</div><div class="p-evidence">${x.evidence}</div><div class="p-interp">${x.interp}</div>`;
+    $("p-constructs").appendChild(div);
+  });
+  $("p-tips").innerHTML = "";
+  pr.tips.forEach(tip => { const li = document.createElement("li"); li.textContent = tip; $("p-tips").appendChild(li); });
+  $("p-note").textContent = "Scope: informal behavioral observation from a single game session — not a clinical or diagnostic assessment. Behavior in a 4-year-old varies a lot between days and settings; treat the patterns as conversation starters, and talk to a pediatric professional if you have genuine developmental concerns.";
 }
 
 /* ================= UI state ================= */
@@ -668,6 +821,7 @@ function gameOver() {
   $("over-brain").textContent = `You ${you} — robot ${robo} · brain ${"⭐".repeat(stars)}${"☆".repeat(5 - stars)}`;
   $("screen-main").hidden = false;
   $("screen-report").hidden = true;
+  $("screen-parent").hidden = true;
   $("overlay").classList.add("show");
   sfx.cheer();
   if (won) confetti(50);
@@ -682,6 +836,7 @@ function resetGame() {
   $("overlay").classList.remove("show");
   $("screen-main").hidden = false;
   $("screen-report").hidden = true;
+  $("screen-parent").hidden = true;
   selection = null;
   fist.textContent = "✊";
   fist.classList.remove("shot");
@@ -728,6 +883,16 @@ $("back-btn").addEventListener("click", () => {
   $("screen-main").hidden = false;
   $("screen-report").hidden = true;
 });
+$("parent-btn").addEventListener("click", () => {
+  renderParentReport();
+  $("screen-main").hidden = true;
+  $("screen-parent").hidden = false;
+});
+$("p-back").addEventListener("click", () => {
+  $("screen-main").hidden = false;
+  $("screen-parent").hidden = true;
+});
+$("again3").addEventListener("click", resetGame);
 $("overlay").addEventListener("click", (e) => { if (e.target === $("overlay")) resetGame(); });
 $("mute").addEventListener("click", () => {
   muted = !muted;
@@ -750,6 +915,7 @@ window.__rps = {
     setHistory(h, o, c) { history = h; outcomes = o; compMoves = c; },
     setSmartness(s) { smartness = s; },
     buildReport,
+    buildParentReport,
     endGame() { you = GOAL; gameOver(); },
   },
 };
