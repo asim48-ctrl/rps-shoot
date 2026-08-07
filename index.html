@@ -97,13 +97,13 @@
     color: rgba(0,0,0,.15);
     transition: transform .3s;
   }
-  .slot .tag {
-    position: absolute;
-    font-size: clamp(14px, 3vw, 20px);
+  .slotwrap { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .tag {
+    font-size: clamp(13px, 2.8vw, 18px);
     font-weight: bold;
-    color: rgba(0,0,0,.35);
-    margin-top: clamp(96px, 22vw, 140px);
+    color: rgba(0,0,0,.4);
     white-space: nowrap;
+    letter-spacing: 1px;
   }
   .center { display: flex; flex-direction: column; align-items: center; }
   #fist {
@@ -319,12 +319,15 @@
 
 <main>
   <div id="stage">
-    <div class="slot" id="player-slot">?</div>
+    <div class="slotwrap">
+      <div class="slot" id="player-slot">?</div>
+      <div class="tag">😀 YOU</div>
+    </div>
     <div class="center">
       <div id="fist">✊</div>
+      <div class="tag">🤖 ROBOT</div>
       <div id="count">Tap a move to play! 👇</div>
     </div>
-    <div class="slot" id="robot-slot">?</div>
   </div>
 
   <div id="brain"><span>🤖 learning…</span><div class="bar"><div class="fill" id="brainfill"></div></div></div>
@@ -336,7 +339,7 @@
     <button class="card paper" data-move="paper"><span>📄</span><span class="word">PAPER</span></button>
     <button class="card scissors" data-move="scissors"><span>✂️</span><span class="word">SCISSORS</span></button>
   </div>
-  <div class="hint">Tap a card to play! &nbsp;·&nbsp; keys: 1 2 3 (or R P S)</div>
+  <div class="hint">Tap a card to play — and throw your hand along with the robot! &nbsp;·&nbsp; keys: 1 2 3</div>
 </footer>
 
 <div id="result"></div>
@@ -376,6 +379,7 @@
 /* ================= game rules ================= */
 const MOVES = ["rock", "paper", "scissors"];
 const CARD_EMOJI = { rock: "🪨", paper: "📄", scissors: "✂️" };
+const HAND_EMOJI = { rock: "✊", paper: "✋", scissors: "✌️" }; // the hand movements
 const BEATEN_BY = { rock: "paper", paper: "scissors", scissors: "rock" }; // what beats X
 const BEATS     = { rock: "scissors", paper: "rock", scissors: "paper" }; // what X beats
 
@@ -590,7 +594,7 @@ const GOAL = 10;                    // first to 10 wins
 
 const $ = (id) => document.getElementById(id);
 const fist = $("fist"), count = $("count"), result = $("result");
-const playerSlot = $("player-slot"), robotSlot = $("robot-slot");
+const playerSlot = $("player-slot");
 const cards = [...document.querySelectorAll(".card")];
 
 function setCountdownStep(text, isShoot) {
@@ -603,9 +607,10 @@ function startGame() {
   state = "countdown";
   cards.forEach(c => c.disabled = true);
   playerSlot.textContent = "?";
-  robotSlot.textContent = "?";
+  fist.textContent = "✊"; // fresh fist for the next bounce
+  fist.classList.remove("shot");
 
-  const steps = ["ROCK", "PAPER", "SCISSORS"];
+  const steps = ["🪨 ROCK", "📄 PAPER", "✂️ SCISSORS"];
   let i = 0;
   fist.classList.add("bounce");
   const step = () => {
@@ -633,19 +638,17 @@ function playRound() {
     : BEATS[player] === comp ? "win" : "lose";
   outcomes.push(outcome);
 
-  // fists fire! the bouncing fist turns into the actual throw,
-  // and both sides reveal the real rock / paper / scissors
+  // the robot's fist fires and HOLDS its hand: the big bouncing fist
+  // becomes the robot's throw (✊ ✋ ✌️) so the child can play along
   fist.classList.remove("bounce");
-  fist.textContent = CARD_EMOJI[player];
+  fist.textContent = HAND_EMOJI[comp];
   fist.classList.remove("shot");
   void fist.offsetWidth;
   fist.classList.add("shot");
-  playerSlot.textContent = CARD_EMOJI[player];
-  robotSlot.textContent = CARD_EMOJI[comp];
-  playerSlot.classList.remove("pop"); robotSlot.classList.remove("pop");
-  void playerSlot.offsetWidth; void robotSlot.offsetWidth;
+  playerSlot.textContent = HAND_EMOJI[player];
+  playerSlot.classList.remove("pop");
+  void playerSlot.offsetWidth;
   playerSlot.classList.add("pop");
-  robotSlot.classList.add("pop");
 
   if (outcome === "win") { you++; result.textContent = "YOU WIN! 🎉"; sfx.win(); confetti(); }
   else if (outcome === "lose") { robo++; result.textContent = "ROBOT WINS 🤖"; sfx.lose(); }
@@ -663,8 +666,6 @@ function playRound() {
     if (you >= GOAL || robo >= GOAL) return gameOver();
     state = "pick";
     setCountdownStep("Tap a move to play!");
-    fist.textContent = "✊";
-    fist.classList.remove("shot");
     result.classList.remove("show");
     cards.forEach(c => c.disabled = false);
   }, 3000);
@@ -703,6 +704,7 @@ function resetGame() {
   selection = null;
   fist.textContent = "✊";
   fist.classList.remove("shot");
+  playerSlot.textContent = "?";
   cards.forEach(c => { c.disabled = false; c.classList.remove("selected"); });
   setCountdownStep("Tap a move to play!");
   state = "pick";
