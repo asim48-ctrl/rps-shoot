@@ -266,6 +266,7 @@
   .p-construct.notable { border-color: #ffd93d; background: #fffbe8; }
   .p-construct.notable .p-name { color: #b07d00; }
   .p-note { text-align: left; background: #f0f0f5; border: 3px solid #d8d8e5; border-radius: 16px; padding: 8px 12px; font-size: 11.5px; color: #666; margin-top: 10px; }
+  .p-beyond-note { text-align: left; font-size: 12px; font-style: italic; color: #888; margin-top: 4px; }
 </style>
 </head>
 <body>
@@ -333,6 +334,9 @@
       <div class="rep-stats" id="p-stats"></div>
       <div id="p-overview"></div>
       <div id="p-constructs"></div>
+      <h3>🌍 BEYOND THE GAME</h3>
+      <div class="p-beyond-note" id="p-beyond-note"></div>
+      <ul id="p-beyond"></ul>
       <h3>🎯 TRY WITH YOUR CHILD</h3>
       <ul id="p-tips"></ul>
       <div class="p-note" id="p-note"></div>
@@ -708,7 +712,20 @@ function buildParentReport(hist, outs, comps) {
   tips.push("Let your child call the countdown (“rock, paper, scissors, SHOOT!”) — leading the rhythm builds impulse timing.");
   if (tips.length > 4) tips.length = 4;
 
-  return { n, wins, losses, ties, constructs, overview, tips };
+  // how the child plays here is a hint for how they tend to operate elsewhere
+  const beyondText = {
+    "Reinforcement sensitivity": "Tends to respond quickly to outcomes in other games and tasks: fast to move on after setbacks, but may also abandon an approach the moment it fails. Praise “sticking with it” when a strategy needs patience.",
+    "Negative recency": "May expect fairness to even out in everyday life — “it's my turn now”, “I'm due a win”. A natural fairness intuition; gently explain that luck and turns aren't owed.",
+    "Opponent modeling": "Notices what others are about to do — early social attunement, handy on playdates. Watch that it doesn't tip into always expecting competition.",
+    "Perseveration vs. deliberate repetition": "Determined persistence when repeating a move — either grit or trouble switching. Notice whether they accept redirection in other activities (changing tasks, tidying up).",
+    "Strategy coherence": "Likely enjoys consistent rules and routines, with predictable preferences at home too. Transitions may go smoother when you announce what comes next.",
+    "Response style": "Explores options quickly and moves on fast — typical for the age. In structured tasks, gentle “one thing at a time” prompts build sustained focus.",
+  };
+  const beyond = notable.length
+    ? notable.map(x => ({ name: x.name.split(" — ")[0], line: beyondText[x.name.split(" — ")[0]] })).slice(0, 3)
+    : [{ name: "Mixed play", line: "No single strong tendency in this session — typical for a 4-year-old, whose style can shift day to day. Watch how they handle wins, losses, and waiting in everyday play." }];
+
+  return { n, wins, losses, ties, constructs, overview, tips, beyond };
 }
 
 function renderParentReport() {
@@ -726,6 +743,13 @@ function renderParentReport() {
   });
   $("p-tips").innerHTML = "";
   pr.tips.forEach(tip => { const li = document.createElement("li"); li.textContent = tip; $("p-tips").appendChild(li); });
+  $("p-beyond-note").textContent = "How you do one thing is how you do everything — up to a point. Game play is a sample, not a verdict: children adapt to context, so use these as cues to look for elsewhere, not conclusions.";
+  $("p-beyond").innerHTML = "";
+  pr.beyond.forEach(x => {
+    const li = document.createElement("li");
+    li.innerHTML = `<b>${x.name}:</b> ${x.line}`;
+    $("p-beyond").appendChild(li);
+  });
   $("p-note").textContent = "Scope: informal behavioral observation from a single game session — not a clinical or diagnostic assessment. Behavior in a 4-year-old varies a lot between days and settings; treat the patterns as conversation starters, and talk to a pediatric professional if you have genuine developmental concerns.";
 }
 
